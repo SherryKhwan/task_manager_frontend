@@ -1,36 +1,38 @@
 import React, { useState, useEffect } from 'react';
-// import { useTable, usePagination } from "react-table";
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { deleteTask, getAllTasks } from '../api/task';
+import { useDispatch, useSelector } from 'react-redux';
+import { removeTask, setTasks } from '../store/tasksSlice';
 
 const AllTasks = () => {
 
-  const [tasks, setTasks] = useState([]);
+  const dispatch = useDispatch();
+  const tasks = useSelector(state => state.tasks);
+
   const [isPressed, setIsPressed] = useState(false);
-  
-  const navigation = useNavigate();
 
-  const getAllTask = async () => {
-    setTasks([]);
-    const res = await getAllTasks();
-    setTasks(res);
-  }
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await getAllTasks();
+        dispatch(setTasks(res));
+      } catch (error) {
+        console.error('Error fetching tasks:', error);
+      }
+    };
 
-  useEffect(() => { 
-    getAllTask();
-  }, [])
+    fetchData();
+  }, [dispatch]);
 
   const handleDelete = async (id) => {
     const isSure = window.confirm("Are you sure you want to delete this task?")
     if (isSure) {
       setIsPressed(true);
       try {
-        deleteTask(id).then((data) => {
-          console.log(data)
-          setTasks(tasks.filter(task => task._id !== id))}
-        )
+        await deleteTask(id);
+        dispatch(removeTask(id));
       } catch (error) {
-
+        console.error('Error deleting task:', error);
       }
       setTimeout(() => {
         setIsPressed(false);
@@ -38,7 +40,7 @@ const AllTasks = () => {
     }
   }
 
-  const RenderStatus = ({enumVal}) => {
+  const RenderStatus = ({ enumVal }) => {
     if (enumVal === 0) {
       return <span className='text-secondary'>Incomplete</span>
     }
@@ -71,7 +73,7 @@ const AllTasks = () => {
                 </td>
                 <td className='text-center'>
                   {new Date(task.dateDue).toLocaleDateString()}
-                  </td>
+                </td>
                 <td className='text-center'>
                   <Link to={`/task/${task.id}`} className='btn btn-sm btn-outline-primary mx-1'>View</Link>
                   <button onClick={() => handleDelete(task.id)} className='btn btn-sm btn-outline-danger mx-1'>Delete</button>

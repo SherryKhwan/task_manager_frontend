@@ -1,7 +1,13 @@
-import React, { useState } from 'react'
-import { createTask } from '../api/task';
+import React, { useEffect, useState } from 'react'
+import { createTask, getAllTasks } from '../api/task';
+import { addTask, setTasks } from '../store/tasksSlice';
+import { useDispatch } from 'react-redux';
 
 const Home = () => {
+
+    const dispatch = useDispatch();
+
+    const today = new Date();
 
     const [task, setTask] = useState("");
     const [description, setDescription] = useState("");
@@ -9,6 +15,18 @@ const Home = () => {
     const [isSubmitted, setIsSubmitted] = useState(false);
 
     const isValid = () => {
+        if (task.trim() === "") {
+            return false;
+        }
+        if (duedate.trim() === "") {
+            return false;
+        }
+        if (new Date(duedate) < today) {
+            return false;
+        }
+        if (description.trim() === "") {
+            return false;
+        }
         return true;
     }
 
@@ -20,27 +38,48 @@ const Home = () => {
         }
     }
 
+    const resetToDefault = () => {
+        setTask("");
+        setDescription("");
+        setDueDate("");
+    }
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitted(true);
         try {
             if (isValid()) {
                 const data = objectMaker();
-                await createTask((data))
+                const res = await createTask((data));
+                dispatch(addTask(res));
+                alert("Task Created Successfully");
+                setIsSubmitted(false)
+                resetToDefault();
+            }
+            else {
+                setTimeout(() => {
+                    setIsSubmitted(false)
+                }, 1000);
             }
         } catch (error) {
-
+            console.error('Error creating task:', error);
         } finally {
-            setTimeout(() => {
-                alert("Task Created Successfully")
-                setIsSubmitted(false)
-            }, 1000);
         }
+    }
+
+    const isDateValid = () => {
+        if (duedate.trim() === "") {
+            return false;
+        }
+        if (new Date(duedate) < today) {
+            return false;
+        }
+        return true;
     }
 
     return (
         <div className='container pb-3'>
-            <div style={{height: '500px'}} className='row align-items-center justify-content-center'>
+            <div style={{ height: '500px' }} className='row align-items-center justify-content-center'>
                 <div className='col-md-6'>
                     <h2 className='text-center mb-4 font-color'>Task Creator</h2>
                     <form className='font-color'>
@@ -56,9 +95,9 @@ const Home = () => {
                         <div className="row mb-3">
                             <label htmlFor="duedate" className="col-sm-3 col-form-label">Due Date</label>
                             <div className="col-sm-9">
-                                <input type="date" value={duedate} onChange={e => setDueDate(e.target.value)} className={(isSubmitted && duedate.trim() === "" ? "is-invalid form-control" : "form-control")} placeholder='Enter Due Date*' required id="duedate" />
+                                <input type="date" value={duedate} onChange={e => setDueDate(e.target.value)} className={`form-control ${isSubmitted && !isDateValid() ? "is-invalid" : ""}`} placeholder='Enter Due Date*' required id="duedate" />
                                 <div className="invalid-feedback">
-                                    Please choose the due date.
+                                    Due date cannot be empty or less than today.
                                 </div>
                             </div>
                         </div>
@@ -71,7 +110,7 @@ const Home = () => {
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div className='d-flex justify-content-end'>
                             <div className='d-grid w-25 gap-2'>
                                 <button disabled={isSubmitted} onClick={handleSubmit} className='btn btn-block btn-outline-light'>Create</button>
